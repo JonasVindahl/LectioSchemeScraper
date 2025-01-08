@@ -9,7 +9,7 @@ This project automates fetching a schedule from Lectio.dk and provides:
   - Allows remote updates of cookies via a web UI.
   - Optionally triggers the scraper manually.
 - Automated setup using `systemd` to run the Flask server and periodically run the scraper.
-- **Optional Pushover notifications** to alert on failures (such as expired cookies or empty schedules).
+- Optional Pushover notifications to alert on failures (such as expired cookies or empty schedules).
 
 ---
 
