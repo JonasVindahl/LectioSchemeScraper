@@ -273,6 +273,7 @@ if __name__ == "__main__":
     all_events = []
 
     # 2) Scrape the next 15 weeks
+    found_any_events = False  # New flag to track if any events are found
     for i in range(15):
         w = iso_week + i
         y = iso_year
@@ -286,18 +287,14 @@ if __name__ == "__main__":
         
         if html_text:
             weekly_events = parse_schedule(html_text)
-            if not weekly_events:  # Check if parsing returned empty
-                send_pushover_notification(
-                    "Lectio Scraper Warning",
-                    f"No events found for week {week_str}, year {y}. The page may be empty."
-                )
             all_events.extend(weekly_events)
+            found_any_events = True  # Set flag to True when events are found
 
     # 3) Generate ICS if there are events
     if all_events:
         ics_file = "lectio_subscription.ics"
         events_to_ics(all_events, ics_file)
-    else:
+    if not found_any_events:  # Check if no events were found
         send_pushover_notification(
             "Lectio Scraper Error",
             "No events found for any of the weeks. Check if cookies have expired or if there are other issues."
