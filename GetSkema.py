@@ -8,7 +8,7 @@ import uuid
 import hashlib
 
 # Pushover Configuration (Set your keys here)
-PUSHOVER_ENABLED = True  # Set to False to disable notifications
+PUSHOVER_ENABLED = False  # Set to False to disable notifications
 PUSHOVER_API_KEY = "your-pushover-api-key"
 PUSHOVER_USER_KEY = "your-pushover-user-key"
 
