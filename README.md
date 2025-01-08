@@ -1,5 +1,3 @@
----
-
 # Lectio Schedule Scraper and ICS Server
 
 This project automates fetching a schedule from Lectio.dk and provides:
