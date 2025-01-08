@@ -7,25 +7,51 @@ from datetime import datetime
 import uuid
 import hashlib
 
+# Pushover Configuration (Set your keys here)
+PUSHOVER_ENABLED = True  # Set to False to disable notifications
+PUSHOVER_API_KEY = "your-pushover-api-key"
+PUSHOVER_USER_KEY = "your-pushover-user-key"
+
 #
 # 1. Load cookies from a local JSON file
 #
 def load_cookies():
     """Load cookies from cookies.json file."""
     with open("cookies.json", "r", encoding="utf-8") as f:
-        return json.load(f)  # returns a dict, e.g. {"ASP.NET_SessionId": "...", ...}
+        return json.load(f)
 
 #
-# 2. Fetch the Lectio page
+# 2. Send Pushover notification (optional)
+#
+def send_pushover_notification(title, message):
+    """Send a Pushover notification if enabled."""
+    if not PUSHOVER_ENABLED:
+        return
+    data = {
+        "token": PUSHOVER_API_KEY,
+        "user": PUSHOVER_USER_KEY,
+        "title": title,
+        "message": message,
+    }
+    try:
+        response = requests.post("https://api.pushover.net/1/messages.json", data=data)
+        if response.status_code == 200:
+            print("Pushover notification sent.")
+        else:
+            print(f"Failed to send Pushover notification. HTTP {response.status_code}")
+    except Exception as e:
+        print(f"Error sending Pushover notification: {e}")
+
+#
+# 3. Fetch the Lectio page
 #
 def fetch_lectio_schedule(week, year):
-    # Build the cookies dictionary from JSON
+    """Fetch the Lectio schedule page."""
     c = load_cookies()
     cookies = {
         "ASP.NET_SessionId": c.get("ASP.NET_SessionId", ""),
         "autologinkeyV2": c.get("autologinkeyV2", ""),
         "lectiogsc": c.get("lectiogsc", "")
-        # Add more cookie keys if needed (like 'BaseSchoolUrl', etc.)
     }
 
     url = f"https://www.lectio.dk/lectio/518/SkemaNy.aspx?week={week}{year}"
@@ -33,13 +59,24 @@ def fetch_lectio_schedule(week, year):
     response = requests.get(url, headers=headers, cookies=cookies)
 
     if response.status_code == 200:
+        if "Log ind" in response.text or "Du er ikke logget ind" in response.text:
+            send_pushover_notification(
+                "Lectio Scraper Error",
+                f"Scraper was redirected to login page for week {week}, year {year}. Cookies may have expired."
+            )
+            print(f"Redirection detected. Cookies may have expired.")
+            return None
         return response.text
     else:
+        send_pushover_notification(
+            "Lectio Scraper Error",
+            f"Failed to fetch schedule for week {week}, year {year}. HTTP {response.status_code}."
+        )
         print(f"Failed to fetch week {week}, year {year}. HTTP {response.status_code}")
         return None
 
 #
-# 3. Parse out events
+# 4. Parse out events (same as before)
 #
 def parse_schedule(html):
     soup = BeautifulSoup(html, "html.parser")
@@ -120,7 +157,6 @@ def parse_schedule(html):
                     start_dt = datetime(day_date.year, day_date.month, day_date.day, s_hh, s_mm)
                     end_dt   = datetime(day_date.year, day_date.month, day_date.day, e_hh, e_mm)
             else:
-                # fallback to module times
                 module_match = brick.parent.find("div", {"data-module": True})
                 if module_match:
                     module_id = module_match["data-module"]
@@ -129,10 +165,8 @@ def parse_schedule(html):
                         start_dt = datetime(day_date.year, day_date.month, day_date.day, s_hh, s_mm)
                         end_dt   = datetime(day_date.year, day_date.month, day_date.day, e_hh, e_mm)
             if not start_dt:
-                # skip if we cannot parse time
                 continue
 
-            # Attempt to find a "meaningful" title in .s2skemabrikcontent
             real_title = None
             s2content = brick.select_one(".s2skemabrikcontent")
             if s2content:
@@ -249,10 +283,22 @@ if __name__ == "__main__":
         
         print(f"Fetching schedule for week={week_str}, year={y}...")
         html_text = fetch_lectio_schedule(week_str, str(y))
+        
         if html_text:
             weekly_events = parse_schedule(html_text)
+            if not weekly_events:  # Check if parsing returned empty
+                send_pushover_notification(
+                    "Lectio Scraper Warning",
+                    f"No events found for week {week_str}, year {y}. The page may be empty."
+                )
             all_events.extend(weekly_events)
 
-    # 3) Generate ICS
-    ics_file = "lectio_subscription.ics"
-    events_to_ics(all_events, ics_file)
+    # 3) Generate ICS if there are events
+    if all_events:
+        ics_file = "lectio_subscription.ics"
+        events_to_ics(all_events, ics_file)
+    else:
+        send_pushover_notification(
+            "Lectio Scraper Error",
+            "No events found for any of the weeks. Check if cookies have expired or if there are other issues."
+        )
