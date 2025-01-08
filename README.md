@@ -14,7 +14,7 @@ This project automates fetching a schedule from Lectio.dk and provides:
 ## General Information
 
 ### Cookie Management
-- **Cookies are essential for fetching schedules from Lectio.** If cookies expire, you need to update them using the provided web UI (`/cookies`) or through an API request.
+- **Cookies are essential for fetching schedules from Lectio.** If cookies expire, you need to update them using the provided web UI (`/update_cookies`) or through an API request.
 - Keep the `cookies.json` file secure, as it contains sensitive login information.
 
 ### ICS File Accessibility
@@ -189,7 +189,7 @@ You can update the cookies using the built-in web UI:
 1. **Visit the cookie management page in your browser:**
 
    ```
-   http://<server-ip>/cookies
+   http://<server-ip>/update_cookies
    ```
 
 2. **Enter your new cookies in the provided form and submit.**
@@ -228,6 +228,6 @@ sudo systemctl list-timers --all | grep lectio-scraper
 ```
 
 ### Cookie expiration:
-If the schedule stops updating, it likely means the cookies have expired. Update the cookies using the `/cookies` web UI.
+If the schedule stops updating, it likely means the cookies have expired. Update the cookies using the `/update_cookies` web UI.
 
 ---
